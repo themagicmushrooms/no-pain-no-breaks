@@ -7,6 +7,8 @@
       <button @click="saveToLocalStorage()">SAVE to LS</button>
       ---------
       <button @click="restoreFromLocalStorage()">reload from LS</button>
+      ---------
+      <button @click="dropLocalDB()">DROP LOCAL DB !!!!!</button>
     </div>
     <div class="controls">
       <button @click="savePainPoint(pain)">SAVE</button>
@@ -82,6 +84,7 @@ export default {
   },
   mounted () {
     this.restoreFromLocalStorage()
+    window.debug_pouch = this.$pouch
   },
   methods: {
     restoreFromLocalStorage () {
@@ -109,6 +112,10 @@ export default {
     triggerSync (live=false) {
       this.$pouch.sync(DB, this.cfg.remoteSyncURL, {live})
     },
+    async dropLocalDB () {
+      this.$pouch.destroy(DB)
+      window.location += ''
+    }
   }
 }
 </script>
