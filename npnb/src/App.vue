@@ -133,8 +133,13 @@ export default {
   background: darkslategray;
   color: white;
   overflow: hidden;
+  height: auto;
+  &:focus-within {
+    transition: all linear 600ms;
+  }
   &:not(:focus-within) {
     height: 10px;
+    filter: blur(10px);
   }
 
   .field {
