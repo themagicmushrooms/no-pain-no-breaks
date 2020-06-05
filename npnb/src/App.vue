@@ -1,14 +1,25 @@
 <template>
   <div id="app">
+    <div class="config">
+      <div class="field" v-for="k in Object.keys(cfg)" :key="k">
+        {{k}}: <input v-model="cfg[k]" :placeholder="k" :title="k" >
+      </div>
+      <button @click="saveToLocalStorage()">SAVE to LS</button>
+      ---------
+      <button @click="restoreFromLocalStorage()">reload from LS</button>
+    </div>
     <div class="controls">
-      <button v-for="(im,i) in images" :key="i" :class="{current: i==currentImage}" @click="currentImage = i">{{im.name}}</button>
-      <br/>
       <button @click="savePainPoint(pain)">SAVE</button>
+      -----------------
+      <button @click="triggerSync()">Sync</button>
+      <br/>
+      <br/>
+      <button v-for="(im,i) in images" :key="i" :class="{current: i==currentImage}" @click="currentImage = i">{{im.name}}</button>
     </div>
     <div class="clickable-image"> <!-- future component root, maybe -->
-      <img :src="images[currentImage].url" ref="forMouse" draggable="false"
+      <img :src="images[currentImage].url" ref="forMouse"
           @click.prevent="setPainLocation($event)"
-          @mousemove="(ev) => { if (ev.buttons & 1) setPainLocation(ev) }">
+          @mousemove="(ev) => { if (ev.buttons & 1) setPainLocation(ev) }" @dragstart.prevent="">
           <div v-for="(p,i) in oldPointsOnCurrentImage" :key="i" class="pp old" :style="{left: p.x+'px', top: p.y+'px'}"><pain-point></pain-point></div>
           <div class="pp" :style="{left: pain.x+'px', top: pain.y+'px'}" v-if="currentImageId == pain.imId"><pain-point></pain-point></div>
     </div>
@@ -21,16 +32,26 @@ import PainPoint from './components/PainPoint.vue'
 
 let DB = 'logs'
 
+
+
+
 export default {
   name: 'App',
   components: {
     PainPoint,
   },
     pouch: {
-    [DB]: {}, // if DB=logs, this makes this.logs be the result from a (live) query on the "logs" database
+    [DB]() { // if DB=logs, this makes this.logs be the result from a (live) query on the "logs" database
+      return {
+        user: this.cfg.user
+      }
+    },
   },
   data: () => ({
-    user: 'test', // TODO: load/save from local storage
+    cfg: {
+      remoteSyncURL: '',
+      user: 'test',
+    },
     pain: {
       x: 100,
       y: 20,
@@ -59,7 +80,18 @@ export default {
       return this.logs.filter(l => l.imId == this.currentImageId)
     },
   },
+  mounted () {
+    this.restoreFromLocalStorage()
+  },
   methods: {
+    restoreFromLocalStorage () {
+      try {
+        Object.assign(this.cfg, JSON.parse(localStorage.getItem('npnb')))
+      } catch (e) { window.debug_exc = e; }
+    },
+    saveToLocalStorage () {
+      localStorage.setItem('npnb', JSON.stringify(this.cfg))
+    },
     setPainLocation (ev) {
       // this.pain.x = ev.offsetX // still experimental but so convenient with CSS transform
       let e = this.$refs.forMouse
@@ -69,8 +101,13 @@ export default {
       this.pain.imId = this.currentImageId
     },
     async savePainPoint (p) {
-      let _id = this.user + ':' + Date.now()
-      await this.$pouch.put({...p, _id}, {}, DB)
+      let _id = this.cfg.user + ':' + Date.now()
+      let user = this.cfg.user
+      await this.$pouch.put({...p, user, _id}, {}, DB)
+      this.pain.imId = null
+    },
+    triggerSync (live=false) {
+      this.$pouch.sync(DB, this.cfg.remoteSyncURL, {live})
     },
   }
 }
@@ -85,7 +122,23 @@ export default {
   text-align: center;
   color: #2c3e50;
 }
+.config {
+  background: darkslategray;
+  color: white;
+  overflow: hidden;
+  &:not(:focus-within) {
+    height: 10px;
+  }
 
+  .field {
+    display: flex;
+    margin-left: 1em;
+    >input {
+      margin-left: 1em;
+      flex-grow: 1;
+    }
+  }
+}
 .clickable-image {
   position: relative; /* make it positioned */
   display: inline-block;
@@ -104,6 +157,7 @@ export default {
 
   img {
     border: 1px solid #EEE;
+    user-select: none;
   }
 }
 </style>
