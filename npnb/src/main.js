@@ -6,6 +6,7 @@ import PouchVue from 'pouch-vue'
 import PouchDB from 'pouchdb-browser'
 import PouchFind from 'pouchdb-find'
 import PouchLiveFind from 'pouchdb-live-find'
+import './registerServiceWorker'
 
 Vue.config.productionTip = false
 
